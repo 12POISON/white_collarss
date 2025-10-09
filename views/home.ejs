@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'WHITE COLLARS' %></title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #fafafa 0%, #f0f2f5 100%);
+      color: #2c3e50;
+      line-height: 1.6;
+    }
+    .navbar {
+      background: rgba(44, 62, 80, 0.95);
+      padding: 1.2rem 2.5rem;
+      box-shadow: 0 4px 20px rgba(44, 62, 80, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      font-size: 2rem;
+      color: white;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+    }
+    .logo span {
+      color: #3498db;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    .nav-links a:hover {
+      background: #3498db;
+    }
+    .hero {
+      text-align: center;
+      padding: 6rem 2rem;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+    }
+    .hero h1 {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 span {
+      color: #3498db;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+      opacity: 0.9;
+    }
+    .btn {
+      display: inline-block;
+      padding: 15px 40px;
+      background: #3498db;
+      color: white;
+      text-decoration: none;
+      border-radius: 30px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin: 0.5rem;
+    }
+    .btn:hover {
+      background: #f39c12;
+      transform: translateY(-3px);
+    }
+    .content {
+      max-width: 1200px;
+      margin: 4rem auto;
+      padding: 0 2rem;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      color: #2c3e50;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
+    }
+    .stat-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .stat-number {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #3498db;
+    }
+    .stat-label {
+      color: #7f8c8d;
+      margin-top: 0.5rem;
+    }
+    .jobs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
+    }
+    .job-card {
+      background: white;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+    .job-card:hover {
+      transform: translateY(-10px);
+    }
+    .job-title {
+      font-size: 1.3rem;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    .job-company {
+      color: #3498db;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    footer {
+      background: #2c3e50;
+      color: #bdc3c7;
+      text-align: center;
+      padding: 2rem;
+      margin-top: 4rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">WHITE <span>COLLARS</span></div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/jobs">Jobs</a></li>
+      <li><a href="/companies">Companies</a></li>
+      <li><a href="/about">About</a></li>
+      <li><a href="/contact">Contact</a></li>
+    </ul>
+    <a href="/auth/signin" class="btn">Sign In</a>
+  </nav>
+
+  <div class="hero">
+    <h1>Find Your Dream <span>Job</span></h1>
+    <p>Connect with top companies and discover amazing career opportunities</p>
+    <a href="/jobs" class="btn">Browse Jobs</a>
+    <a href="/companies" class="btn">View Companies</a>
+  </div>
+
+  <div class="content">
+    <h2 class="section-title">Our Stats</h2>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-number">50K+</div>
+        <div class="stat-label">Active Job Seekers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">5K+</div>
+        <div class="stat-label">Companies Trust Us</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">25K+</div>
+        <div class="stat-label">Jobs Posted Monthly</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">95%</div>
+        <div class="stat-label">Success Rate</div>
+      </div>
+    </div>
+
+    <% if (jobs && jobs.length > 0) { %>
+      <h2 class="section-title">Featured Jobs</h2>
+      <div class="jobs-grid">
+        <% jobs.forEach(job => { %>
+          <div class="job-card">
+            <div class="job-title"><%= job.title %></div>
+            <div class="job-company"><%= job.company %></div>
+            <div class="job-location"><%= job.location %></div>
+            <a href="/jobs/<%= job._id %>" class="btn">View Details</a>
+          </div>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+
+  <footer>
+    <p>&copy; 2025 WHITE COLLARS - Find Your Dream Job</p>
+  </footer>
+</body>
+</html>

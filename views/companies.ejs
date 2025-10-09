@@ -1,0 +1,27 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<h1 class="companies-page-title">Top Global Companies Hiring</h1>
+
+<div class="companies-table-container">
+  <table class="companies-table">
+    <tbody>
+      <% 
+      const chunkSize = 5;
+      for(let i = 0; i < companies.length; i += chunkSize) {
+        const chunk = companies.slice(i, i + chunkSize);
+      %>
+        <tr>
+          <% chunk.forEach(company => { %>
+            <td onclick="window.location.href='/companies/<%= company._id %>'">
+              <img src="<%= company.logo %>" class="company-img" alt="<%= company.name %>" />
+              <div class="company-name"><%= company.name %></div>
+            </td>
+          <% }) %>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('partials/footer') %>

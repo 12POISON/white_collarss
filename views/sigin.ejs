@@ -1,0 +1,46 @@
+<%- include('partials/header') %>
+<%- include('partials/navbar') %>
+
+<div style="min-height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); padding: 2rem;">
+  <div class="auth-container">
+    <div class="logo">WHITE <span style="color: #3498db;">COLLARS</span></div>
+    <p class="subtitle">Your gateway to professional opportunities</p>
+
+    <% if (error) { %>
+      <div class="error-message show"><%= error %></div>
+    <% } %>
+
+    <!-- Sign In Form -->
+    <h2 class="form-title">Welcome Back</h2>
+    <form action="/auth/signin" method="POST" class="auth-form">
+      <div class="form-group">
+        <label class="form-label">Email Address <span class="required">*</span></label>
+        <input type="email" name="email" class="form-input" placeholder="your.email@example.com" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password <span class="required">*</span></label>
+        <input type="password" name="password" class="form-input" placeholder="Enter your password" required minlength="6" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Account Type <span class="required">*</span></label>
+        <select name="role" class="form-select" required>
+          <option value="">Select your account type</option>
+          <option value="jobseeker">Job Seeker</option>
+          <option value="recruiter">Recruiter</option>
+          <option value="employer">Employer</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <button type="submit" class="submit-btn">Sign In to WHITE COLLARS</button>
+    </form>
+
+    <div class="auth-footer">
+      <a href="/" class="footer-link">← Back to WHITE COLLARS Home</a>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

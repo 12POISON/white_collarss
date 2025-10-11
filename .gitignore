@@ -2,33 +2,31 @@
 node_modules/
 package-lock.json
 
-# Environment variables
+# Environment
 .env
 .env.local
 .env.development
 .env.production
+
+# Vercel
+.vercel
 
 # Logs
 logs/
 *.log
 npm-debug.log*
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# IDE files
+# IDE
 .vscode/
 .idea/
-*.swp
 
 # Uploads
 public/uploads/*
 
-# Build files
+# Build
 dist/
 build/
-
-# Database
-*.db
-*.sqlite

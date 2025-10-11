@@ -13,7 +13,8 @@
     "job-portal",
     "nodejs",
     "express",
-    "mongodb"
+    "mongodb",
+    "vercel"
   ],
   "author": "Your Name",
   "license": "MIT",

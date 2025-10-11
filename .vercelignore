@@ -1,55 +1,11 @@
-# Dependencies
-node_modules/
-package-lock.json
-
-# Environment
+node_modules
 .env
 .env.local
-.env.*.local
-.env.development
-.env.production
-
-# Version control
-.git/
-.gitignore
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# OS files
+.git
+npm-debug.log
 .DS_Store
-Thumbs.db
-*.swp
-*.swo
-._*
-
-# IDE
-.vscode/
-.idea/
-*.sublime-*
-*.sublime-project
-*.sublime-workspace
-
-# Testing
-coverage/
-.nyc_output/
-test-results/
-
-# Build outputs
-dist/
-build/
-out/
-.next/
-
-# Vercel
-.vercel/
-
-# Misc
-.cache/
-tmp/
-temp/
-*.tsbuildinfo
+*log
+coverage
+.nyc_output
+.vscode
+.idea

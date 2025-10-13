@@ -1,117 +1,206 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-// Sign In Page
+// ============================================
+// SIGNIN ROUTES
+// ============================================
+
+// GET /auth/signin - Display signin page
 router.get('/signin', (req, res) => {
-  if (req.session.user) {
-    return res.redirect('/');
-  }
-  
   res.render('signin', {
-    title: 'Sign In - WHITE COLLARS'
+    title: 'Sign In - WHITE COLLARS',
+    error: req.session.error || null,
+    success: req.session.success || null
+  });
+  
+  // Clear messages after displaying
+  delete req.session.error;
+  delete req.session.success;
+});
+
+// POST /auth/signin - Process signin form
+router.post('/signin', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.render('signin', {
+        title: 'Sign In - WHITE COLLARS',
+        error: 'Please provide both email and password',
+        success: null
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    
+    if (!user) {
+      return res.render('signin', {
+        title: 'Sign In - WHITE COLLARS',
+        error: 'Invalid email or password',
+        success: null
+      });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.render('signin', {
+        title: 'Sign In - WHITE COLLARS',
+        error: 'Your account has been deactivated. Please contact support.',
+        success: null
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      return res.render('signin', {
+        title: 'Sign In - WHITE COLLARS',
+        error: 'Invalid email or password',
+        success: null
+      });
+    }
+
+    // Create session
+    req.session.user = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      userType: user.userType
+    };
+
+    req.session.success = `Welcome back, ${user.name}!`;
+
+    // Redirect based on user type
+    if (user.userType === 'employer') {
+      return res.redirect('/employer/dashboard');
+    } else {
+      return res.redirect('/jobs');
+    }
+
+  } catch (error) {
+    console.error('Signin error:', error);
+    res.render('signin', {
+      title: 'Sign In - WHITE COLLARS',
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
+  }
+});
+
+// ============================================
+// SIGNUP ROUTES
+// ============================================
+
+// GET /auth/signup - Display signup page
+router.get('/signup', (req, res) => {
+  res.render('signup', {
+    title: 'Sign Up - WHITE COLLARS',
+    error: null,
+    success: null
   });
 });
 
-// Sign In POST
-router.post('/signin', async (req, res) => {
-  try {
-    const { email, password, role } = req.body;
-    
-    const user = await User.findOne({ email }).select('+password');
-    
-    if (!user) {
-      req.session.error = 'Invalid email or password';
-      return res.redirect('/auth/signin');
-    }
-    
-    const isPasswordValid = await user.comparePassword(password);
-    
-    if (!isPasswordValid) {
-      req.session.error = 'Invalid email or password';
-      return res.redirect('/auth/signin');
-    }
-    
-    if (user.role !== role) {
-      req.session.error = 'Invalid account type';
-      return res.redirect('/auth/signin');
-    }
-    
-    if (!user.isActive) {
-      req.session.error = 'Your account has been deactivated';
-      return res.redirect('/auth/signin');
-    }
-    
-    user.lastLogin = Date.now();
-    await user.save();
-    
-    req.session.user = {
-      id: user._id,
-      name: user.name,
-      surname: user.surname,
-      email: user.email,
-      role: user.role
-    };
-    
-    req.session.success = 'Successfully signed in!';
-    res.redirect('/');
-    
-  } catch (error) {
-    console.error('Sign in error:', error);
-    req.session.error = 'An error occurred. Please try again.';
-    res.redirect('/auth/signin');
-  }
-});
-
-// Sign Up POST
+// POST /auth/signup - Process signup form
 router.post('/signup', async (req, res) => {
   try {
-    const { surname, name, email, password, qualification, age, experience, experienceYears } = req.body;
-    
-    const existingUser = await User.findOne({ email });
-    
-    if (existingUser) {
-      req.session.error = 'Email already registered';
-      return res.redirect('/auth/signin');
+    const { name, email, password, userType } = req.body;
+
+    // Validation
+    if (!name || !email || !password || !userType) {
+      return res.render('signup', {
+        title: 'Sign Up - WHITE COLLARS',
+        error: 'All fields are required',
+        success: null
+      });
     }
-    
-    const user = await User.create({
-      surname,
-      name,
-      email,
-      password,
-      qualification,
-      age: parseInt(age),
-      experience,
-      experienceYears: experience === 'yes' ? parseInt(experienceYears) : 0,
-      role: 'jobseeker'
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.render('signup', {
+        title: 'Sign Up - WHITE COLLARS',
+        error: 'Please provide a valid email address',
+        success: null
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.render('signup', {
+        title: 'Sign Up - WHITE COLLARS',
+        error: 'Password must be at least 6 characters long',
+        success: null
+      });
+    }
+
+    // Validate user type
+    if (!['jobseeker', 'employer'].includes(userType)) {
+      return res.render('signup', {
+        title: 'Sign Up - WHITE COLLARS',
+        error: 'Invalid user type selected',
+        success: null
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      email: email.toLowerCase().trim() 
     });
     
-    req.session.user = {
-      id: user._id,
-      name: user.name,
-      surname: user.surname,
-      email: user.email,
-      role: user.role
-    };
+    if (existingUser) {
+      return res.render('signup', {
+        title: 'Sign Up - WHITE COLLARS',
+        error: 'An account with this email already exists',
+        success: null
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create new user
+    const newUser = new User({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      userType: userType
+    });
+
+    await newUser.save();
+
+    // Store success message in session
+    req.session.success = 'Account created successfully! Please sign in.';
     
-    req.session.success = 'Account created successfully!';
-    res.redirect('/');
-    
-  } catch (error) {
-    console.error('Sign up error:', error);
-    req.session.error = error.message || 'An error occurred during registration';
+    // Redirect to signin page
     res.redirect('/auth/signin');
+
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.render('signup', {
+      title: 'Sign Up - WHITE COLLARS',
+      error: 'An error occurred. Please try again.',
+      success: null
+    });
   }
 });
 
-// Sign Out
-router.get('/signout', (req, res) => {
+// ============================================
+// LOGOUT ROUTE
+// ============================================
+
+// GET /auth/logout - Logout user
+router.get('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.error('Sign out error:', err);
+      console.error('Logout error:', err);
+      return res.redirect('/');
     }
-    res.redirect('/');
+    res.redirect('/auth/signin');
   });
 });
 

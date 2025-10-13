@@ -1,86 +1,52 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  surname: {
-    type: String,
-    required: [true, 'Surname is required'],
-    trim: true
-  },
   name: {
     type: String,
-    required: [true, 'First name is required'],
-    trim: true
+    required: [true, 'Name is required'],
+    trim: true,
+    minlength: [2, 'Name must be at least 2 characters'],
+    maxlength: [100, 'Name cannot exceed 100 characters']
   },
   email: {
     type: String,
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email']
   },
   password: {
     type: String,
     required: [true, 'Password is required'],
-    minlength: 6,
-    select: false
+    minlength: [6, 'Password must be at least 6 characters']
   },
-  qualification: {
+  userType: {
     type: String,
-    required: true,
-    trim: true
-  },
-  age: {
-    type: Number,
-    required: true,
-    min: 14,
-    max: 120
-  },
-  experience: {
-    type: String,
-    enum: ['yes', 'no'],
-    required: true
-  },
-  experienceYears: {
-    type: Number,
-    min: 0,
-    max: 50,
-    default: 0
-  },
-  role: {
-    type: String,
-    enum: ['jobseeker', 'recruiter', 'employer', 'admin'],
-    default: 'jobseeker'
+    enum: {
+      values: ['jobseeker', 'employer'],
+      message: 'User type must be either jobseeker or employer'
+    },
+    required: [true, 'User type is required']
   },
   isActive: {
     type: Boolean,
     default: true
   },
-  lastLogin: {
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
     type: Date,
     default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-// Only keep indexes that are NOT unique
-userSchema.index({ role: 1 });
-userSchema.index({ createdAt: -1 });
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+// Update timestamp on save
+userSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
   next();
 });
-
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
 
 module.exports = mongoose.model('User', userSchema);

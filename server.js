@@ -1,245 +1,183 @@
 require('dotenv').config();
 const express = require('express');
-const path = require('path');
+const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
-const methodOverride = require('method-override');
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
-const connectDB = require('./config/db');
-
-// Import middleware (optional - comment out if files don't exist yet)
-// const { flash } = require('./middleware/flash');
-// const { requestLogger } = require('./middleware/logger');
-// const { setSecurityHeaders, sanitizeInput } = require('./middleware/security');
-// const { rateLimit } = require('./middleware/rateLimiter');
+const path = require('path');
+const methodOverride = require('method-override');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
+// ============================================
+// DATABASE CONNECTION
+// ============================================
+mongoose.set('strictQuery', false);
+
+const connectDB = async () => {
+  try {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(process.env.MONGODB_URI, {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
+      console.log('✅ MongoDB Connected');
+    }
+  } catch (error) {
+    console.error('❌ MongoDB Connection Error:', error.message);
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
+  }
+};
+
+// Connect to database
 connectDB();
 
-// Set EJS as templating engine
+// Handle MongoDB connection events
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('MongoDB disconnected');
+});
+
+// ============================================
+// MIDDLEWARE
+// ============================================
+
+// Trust proxy for Vercel
+app.set('trust proxy', 1);
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Method override for PUT/DELETE
+app.use(methodOverride('_method'));
+
+// Logging (development only)
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
+
+// Static files
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: process.env.NODE_ENV === 'production' ? '1y' : 0
+}));
+
+// View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Trust proxy (if behind reverse proxy like nginx)
-app.set('trust proxy', 1);
-
-// Security headers (optional - uncomment if middleware exists)
-// app.use(setSecurityHeaders);
-
-// HTTP request logger (only in development)
-if (process.env.NODE_ENV === 'development') {
-  // app.use(morgan('dev')); // Uncomment if morgan is needed
-}
-
-// Custom request logger (optional - uncomment if middleware exists)
-// app.use(requestLogger);
-
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Body parsing middleware
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(express.json({ limit: '10mb' }));
-
-// Cookie parser (optional - uncomment if needed)
-// app.use(cookieParser());
-
-// Method override for PUT and DELETE in forms
-app.use(methodOverride('_method'));
-
-// Sanitize user input (optional - uncomment if middleware exists)
-// app.use(sanitizeInput);
-
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key-change-this-in-production',
+  secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this',
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    touchAfter: 24 * 3600
+    touchAfter: 24 * 3600,
+    crypto: {
+      secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this'
+    }
   }),
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'
-  },
-  name: 'white-collars-session'
+  }
 }));
 
-// Flash messages middleware (optional - uncomment if middleware exists)
-// app.use(flash);
-
-// Rate limiting for auth routes (optional - uncomment if middleware exists)
-// app.use('/auth', rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   max: 10,
-//   message: 'Too many authentication attempts, please try again later'
-// }));
-
-// Make user and messages available in all templates
+// Flash messages and user data middleware
 app.use((req, res, next) => {
-  res.locals.user = req.session.user || null;
-  res.locals.currentPath = req.path;
   res.locals.success = req.session.success || null;
   res.locals.error = req.session.error || null;
+  res.locals.user = req.session.user || null;
   
-  // Clear flash messages after setting them
   delete req.session.success;
   delete req.session.error;
   
   next();
 });
 
-// Helper functions for templates
-app.locals.formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
+// ============================================
+// ROUTES
+// ============================================
 
-app.locals.timeAgo = (date) => {
-  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-  
-  let interval = seconds / 31536000;
-  if (interval > 1) return Math.floor(interval) + ' years ago';
-  
-  interval = seconds / 2592000;
-  if (interval > 1) return Math.floor(interval) + ' months ago';
-  
-  interval = seconds / 86400;
-  if (interval > 1) return Math.floor(interval) + ' days ago';
-  
-  interval = seconds / 3600;
-  if (interval > 1) return Math.floor(interval) + ' hours ago';
-  
-  interval = seconds / 60;
-  if (interval > 1) return Math.floor(interval) + ' minutes ago';
-  
-  return Math.floor(seconds) + ' seconds ago';
-};
-
-// Routes
 try {
-  app.use('/', require('./routes/index'));
-  app.use('/auth', require('./routes/auth'));
-  app.use('/jobs', require('./routes/jobs'));
-  app.use('/companies', require('./routes/companies'));
-  app.use('/contact', require('./routes/contact'));
-  app.use('/careers', require('./routes/careers'));
-  app.use('/about', require('./routes/about'));
+  // Import routes
+  const indexRoutes = require('./routes/index');
+  const authRoutes = require('./routes/auth');
+  const jobRoutes = require('./routes/jobs');
+  const companyRoutes = require('./routes/companies');
+
+  // Use routes
+  app.use('/', indexRoutes);
+  app.use('/auth', authRoutes);
+  app.use('/jobs', jobRoutes);
+  app.use('/companies', companyRoutes);
+
 } catch (error) {
   console.error('Error loading routes:', error);
-  process.exit(1);
 }
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
+// ============================================
+// ERROR HANDLING
+// ============================================
 
-// 404 handler - Must be after all routes
-app.use((req, res) => {
-  res.status(404).render('404', { 
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).render('404', {
     title: '404 - Page Not Found',
     path: req.path
   });
 });
 
-// Global error handler - Must be last
+// Global error handler
 app.use((err, req, res, next) => {
-  // Log error
-  console.error('Error occurred:');
-  console.error('Message:', err.message);
-  console.error('Stack:', err.stack);
-  console.error('URL:', req.originalUrl);
-  console.error('Method:', req.method);
+  console.error('Error occurred:', err.message);
   
-  // Set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = process.env.NODE_ENV === 'development' ? err : {};
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(err.stack);
+  }
   
-  // Render error page
   const statusCode = err.status || err.statusCode || 500;
-  res.status(statusCode);
   
-  // Handle different error types
-  if (err.name === 'ValidationError') {
-    return res.render('error', {
-      title: 'Validation Error',
-      message: 'Please check your input and try again',
-      error: process.env.NODE_ENV === 'development' ? err : {}
-    });
-  }
-  
-  if (err.name === 'CastError') {
-    return res.render('error', {
-      title: 'Invalid Request',
-      message: 'The requested resource was not found',
-      error: process.env.NODE_ENV === 'development' ? err : {}
-    });
-  }
-  
-  if (err.code === 11000) {
-    return res.render('error', {
-      title: 'Duplicate Entry',
-      message: 'A record with this information already exists',
-      error: process.env.NODE_ENV === 'development' ? err : {}
-    });
-  }
-  
-  // Default error page
-  res.render('error', {
-    title: statusCode === 500 ? 'Server Error' : 'Error',
-    message: statusCode === 500 ? 'Something went wrong on our end' : err.message,
+  res.status(statusCode).render('error', {
+    title: 'Error',
+    message: err.message || 'Something went wrong',
     error: process.env.NODE_ENV === 'development' ? err : {}
   });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log('═════════════════════════════════════════════');
-  console.log(`🚀 WHITE COLLARS Server Started`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Server running on: http://localhost:${PORT}`);
-  console.log(`📊 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
-  console.log(`⏰ Started at: ${new Date().toLocaleString()}`);
-  console.log('═════════════════════════════════════════════');
-});
+// ============================================
+// SERVER START (Local Development Only)
+// ============================================
+const PORT = process.env.PORT || 3000;
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log('═══════════════════════════════════════');
+    console.log('🚀 WHITE COLLARS Server Started');
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🌐 Local URL: http://localhost:${PORT}`);
+    console.log(`📧 MongoDB: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
+    console.log('═══════════════════════════════════════');
+    console.log('\n📌 Available Routes:');
+    console.log('   → Home:     http://localhost:' + PORT);
+    console.log('   → Signin:   http://localhost:' + PORT + '/auth/signin');
+    console.log('   → Signup:   http://localhost:' + PORT + '/auth/signup');
+    console.log('   → Jobs:     http://localhost:' + PORT + '/jobs');
+    console.log('   → About:    http://localhost:' + PORT + '/about');
+    console.log('   → Contact:  http://localhost:' + PORT + '/contact');
+    console.log('═══════════════════════════════════════\n');
   });
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
-  console.error(err.name, err.message);
-  process.exit(1);
-});
-
+// Export for Vercel (serverless)
 module.exports = app;

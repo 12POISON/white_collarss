@@ -37,11 +37,15 @@ connectDB();
 
 // Handle MongoDB connection events
 mongoose.connection.on('error', (err) => {
-  console.error('MongoDB error:', err);
+  console.error('❌ MongoDB error:', err.message);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('MongoDB disconnected');
+  console.warn('⚠️ MongoDB disconnected');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('✅ MongoDB reconnected');
 });
 
 // ============================================
@@ -98,6 +102,7 @@ app.use((req, res, next) => {
   res.locals.success = req.session.success || null;
   res.locals.error = req.session.error || null;
   res.locals.user = req.session.user || null;
+  res.locals.currentPath = req.path;
   
   delete req.session.success;
   delete req.session.error;
@@ -113,17 +118,29 @@ try {
   // Import routes
   const indexRoutes = require('./routes/index');
   const authRoutes = require('./routes/auth');
-  const jobRoutes = require('./routes/jobs');
-  const companyRoutes = require('./routes/companies');
-
+  
   // Use routes
   app.use('/', indexRoutes);
   app.use('/auth', authRoutes);
-  app.use('/jobs', jobRoutes);
-  app.use('/companies', companyRoutes);
+
+  // Conditionally load job and company routes if they exist
+  try {
+    const jobRoutes = require('./routes/jobs');
+    app.use('/jobs', jobRoutes);
+  } catch (err) {
+    console.warn('⚠️ Jobs routes not found, skipping...');
+  }
+
+  try {
+    const companyRoutes = require('./routes/companies');
+    app.use('/companies', companyRoutes);
+  } catch (err) {
+    console.warn('⚠️ Company routes not found, skipping...');
+  }
 
 } catch (error) {
-  console.error('Error loading routes:', error);
+  console.error('❌ Error loading routes:', error.message);
+  process.exit(1);
 }
 
 // ============================================
@@ -140,7 +157,7 @@ app.use((req, res, next) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Error occurred:', err.message);
+  console.error('❌ Error occurred:', err.message);
   
   if (process.env.NODE_ENV !== 'production') {
     console.error(err.stack);
@@ -148,11 +165,18 @@ app.use((err, req, res, next) => {
   
   const statusCode = err.status || err.statusCode || 500;
   
-  res.status(statusCode).render('error', {
-    title: 'Error',
-    message: err.message || 'Something went wrong',
-    error: process.env.NODE_ENV === 'development' ? err : {}
-  });
+  // Try to render error page, fallback to JSON
+  try {
+    res.status(statusCode).render('error', {
+      title: 'Error',
+      message: err.message || 'Something went wrong',
+      error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+  } catch (renderError) {
+    res.status(statusCode).json({
+      error: err.message || 'Something went wrong'
+    });
+  }
 });
 
 // ============================================
@@ -162,22 +186,37 @@ const PORT = process.env.PORT || 3000;
 
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
-    console.log('═══════════════════════════════════════');
+    console.log('\n═══════════════════════════════════════');
     console.log('🚀 WHITE COLLARS Server Started');
+    console.log('═══════════════════════════════════════');
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 Local URL: http://localhost:${PORT}`);
-    console.log(`📧 MongoDB: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
+    console.log(`🌐 Local URL:   http://localhost:${PORT}`);
+    console.log(`📧 MongoDB:     ${process.env.MONGODB_URI ? '✅ Connected' : '❌ Not configured'}`);
     console.log('═══════════════════════════════════════');
     console.log('\n📌 Available Routes:');
-    console.log('   → Home:     http://localhost:' + PORT);
-    console.log('   → Signin:   http://localhost:' + PORT + '/auth/signin');
-    console.log('   → Signup:   http://localhost:' + PORT + '/auth/signup');
-    console.log('   → Jobs:     http://localhost:' + PORT + '/jobs');
-    console.log('   → About:    http://localhost:' + PORT + '/about');
-    console.log('   → Contact:  http://localhost:' + PORT + '/contact');
+    console.log(`   → Home:      http://localhost:${PORT}/`);
+    console.log(`   → Sign In:   http://localhost:${PORT}/auth/signin`);
+    console.log(`   → Sign Up:   http://localhost:${PORT}/auth/signup`);
+    console.log(`   → About:     http://localhost:${PORT}/about`);
+    console.log(`   → Contact:   http://localhost:${PORT}/contact`);
+    console.log(`   → Jobs:      http://localhost:${PORT}/jobs`);
+    console.log(`   → Companies: http://localhost:${PORT}/companies`);
     console.log('═══════════════════════════════════════\n');
   });
 }
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  await mongoose.connection.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('\nSIGINT signal received: closing HTTP server');
+  await mongoose.connection.close();
+  process.exit(0);
+});
 
 // Export for Vercel (serverless)
 module.exports = app;

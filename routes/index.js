@@ -1,11 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const Job = require('../models/Job');
-const Company = require('../models/Company');
+const Job = require('../models/job');
+const Company = require('../models/company');
 
-// ============================================
-// HOME PAGE
-// ============================================
+// Home page
 router.get('/', async (req, res) => {
   try {
     const featuredJobs = await Job.find({ active: true, featured: true })
@@ -33,62 +31,6 @@ router.get('/', async (req, res) => {
     res.status(500).render('error', { 
       title: 'Error',
       message: 'Unable to load home page' 
-    });
-  }
-});
-
-// ============================================
-// ABOUT PAGE
-// ============================================
-router.get('/about', (req, res) => {
-  res.render('about', {
-    title: 'About Us - WHITE COLLARS'
-  });
-});
-
-// ============================================
-// CONTACT PAGE
-// ============================================
-router.get('/contact', (req, res) => {
-  res.render('contact', {
-    title: 'Contact Us - WHITE COLLARS',
-    error: null,
-    success: null
-  });
-});
-
-router.post('/contact', async (req, res) => {
-  try {
-    const { name, email, subject, message } = req.body;
-    
-    // Validation
-    if (!name || !email || !subject || !message) {
-      return res.render('contact', {
-        title: 'Contact Us - WHITE COLLARS',
-        error: 'All fields are required',
-        success: null
-      });
-    }
-
-    // Here you would typically:
-    // 1. Save to database
-    // 2. Send email notification
-    // For now, just show success message
-    
-    console.log('Contact form submission:', { name, email, subject, message });
-    
-    res.render('contact', {
-      title: 'Contact Us - WHITE COLLARS',
-      error: null,
-      success: 'Thank you for contacting us! We will get back to you soon.'
-    });
-
-  } catch (error) {
-    console.error('Contact form error:', error);
-    res.render('contact', {
-      title: 'Contact Us - WHITE COLLARS',
-      error: 'An error occurred. Please try again.',
-      success: null
     });
   }
 });

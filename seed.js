@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Job = require('./models/job');
-const Company = require('./models/company');
+const Job = require('../models/job');
+const Company = require('../models/company');
 const User = require('./models/User');
 
 const seedDatabase = async () => {

@@ -1,0 +1,41 @@
+[
+  {
+    "_id": {"$oid": "68e7d7eb2edbeed3a027d9a1"},
+    "surname": "Admin",
+    "name": "System",
+    "email": "admin@whitecollarsjobs.com",
+    "password": "$2a$10$bcFBPUSeL0PaspgIgs2szO4q6DyQp82PoKM1kSXQ54cgpUB3jCKai",
+    "qualification": "MBA",
+    "age": 30,
+    "experience": "yes",
+    "experienceYears": 5,
+    "role": "admin",
+    "isActive": true,
+    "lastLogin": {"$date": "2025-10-09T15:42:35.233Z"},
+    "createdAt": {"$date": "2025-10-09T15:42:35.236Z"},
+    "updatedAt": {"$date": "2025-10-09T15:42:35.236Z"},
+    "__v": 0
+  },
+  {
+    "_id": {"$oid": "68eca1f041638c7cff14a4b2"},
+    "name": "REDDY",
+    "email": "dev.red.rt24@dypatil.edu",
+    "password": "$2a$12$IMs1E/trCg/1cL24J4dc6.85FZ8hWA25ad/nHShhvIe3PzE6QcWP6",
+    "userType": "jobseeker",
+    "isActive": true,
+    "createdAt": {"$date": "2025-10-13T06:53:36.295Z"},
+    "updatedAt": {"$date": "2025-10-13T06:53:36.304Z"},
+    "__v": 0
+  },
+  {
+    "_id": {"$oid": "68ee70ba3e0df211e051bbfe"},
+    "name": "REDDY",
+    "email": "bharadawajareddydevireddy@gmail.com",
+    "password": "$2a$12$TxJKUBvhFRRWcx1hmvUrbu2/KQWd.zMVkizQKeMTRoZMy/Lr.pium",
+    "userType": "employer",
+    "isActive": true,
+    "createdAt": {"$date": "2025-10-14T15:48:10.602Z"},
+    "updatedAt": {"$date": "2025-10-14T15:48:10.613Z"},
+    "__v": 0
+  }
+]

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Job = require('../models/job');
+const Job = require('./models/job');
 
 // Jobs listing page
 router.get('/', async (req, res) => {

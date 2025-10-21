@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const Job = require('../models/Job');
-const Company = require('../models/Company');
+const Job = require('../models/job');
+const Company = require('../models/company');
 
 // ============================================
 // HOME PAGE

@@ -52,7 +52,7 @@ mongoose.connection.on('reconnected', () => {
 // MIDDLEWARE
 // ============================================
 
-// Trust proxy for Vercel
+// Trust proxy for Vercel / Render
 app.set('trust proxy', 1);
 
 // Body parsing
@@ -69,44 +69,54 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Static files
-app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: process.env.NODE_ENV === 'production' ? '1y' : 0
-}));
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    maxAge: process.env.NODE_ENV === 'production' ? '1y' : 0,
+  })
+);
 
 // View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this',
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    touchAfter: 24 * 3600,
-    crypto: {
-      secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this'
-    }
-  }),
-  cookie: {
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
-  }
-}));
+// ============================================
+// SESSION CONFIGURATION
+// ============================================
 
-// Flash messages and user data middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      touchAfter: 24 * 3600, // Update once per day
+      crypto: {
+        secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this',
+      },
+    }),
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    },
+  })
+);
+
+// ============================================
+// FLASH + USER DATA MIDDLEWARE
+// ============================================
+
 app.use((req, res, next) => {
   res.locals.success = req.session.success || null;
   res.locals.error = req.session.error || null;
   res.locals.user = req.session.user || null;
   res.locals.currentPath = req.path;
-  
+
   delete req.session.success;
   delete req.session.error;
-  
+
   next();
 });
 
@@ -115,32 +125,32 @@ app.use((req, res, next) => {
 // ============================================
 
 try {
-  // Import routes
   const indexRoutes = require('./routes/index');
   const authRoutes = require('./routes/auth');
-  
-  // Use routes
+
   app.use('/', indexRoutes);
   app.use('/auth', authRoutes);
 
-  // Conditionally load job and company routes if they exist
-  try {
-    const jobRoutes = require('./routes/jobs');
-    app.use('/jobs', jobRoutes);
-  } catch (err) {
-    console.warn('⚠️ Jobs routes not found, skipping...');
-  }
+  // Safely load optional routes
+  const optionalRoutes = [
+    { path: '/jobs', file: './routes/jobs' },
+    { path: '/companies', file: './routes/companies' },
+  ];
 
-  try {
-    const companyRoutes = require('./routes/companies');
-    app.use('/companies', companyRoutes);
-  } catch (err) {
-    console.warn('⚠️ Company routes not found, skipping...');
-  }
-
+  optionalRoutes.forEach(({ path, file }) => {
+    try {
+      const routeModule = require(file);
+      app.use(path, routeModule);
+      console.log(`✅ Loaded route: ${path}`);
+    } catch {
+      console.warn(`⚠️ Optional route ${file} not found, skipping...`);
+    }
+  });
 } catch (error) {
   console.error('❌ Error loading routes:', error.message);
-  process.exit(1);
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
 }
 
 // ============================================
@@ -149,38 +159,41 @@ try {
 
 // 404 Handler
 app.use((req, res, next) => {
-  res.status(404).render('404', {
-    title: '404 - Page Not Found',
-    path: req.path
-  });
+  res.status(404);
+  try {
+    res.render('404', {
+      title: '404 - Page Not Found',
+      path: req.path,
+    });
+  } catch {
+    res.json({ error: '404 - Page Not Found' });
+  }
 });
 
-// Global error handler
+// Global Error Handler
 app.use((err, req, res, next) => {
   console.error('❌ Error occurred:', err.message);
-  
   if (process.env.NODE_ENV !== 'production') {
     console.error(err.stack);
   }
-  
+
   const statusCode = err.status || err.statusCode || 500;
-  
-  // Try to render error page, fallback to JSON
+
   try {
     res.status(statusCode).render('error', {
       title: 'Error',
       message: err.message || 'Something went wrong',
-      error: process.env.NODE_ENV === 'development' ? err : {}
+      error: process.env.NODE_ENV === 'development' ? err : {},
     });
-  } catch (renderError) {
+  } catch {
     res.status(statusCode).json({
-      error: err.message || 'Something went wrong'
+      error: err.message || 'Something went wrong',
     });
   }
 });
 
 // ============================================
-// SERVER START (Local Development Only)
+// SERVER START (Local Only)
 // ============================================
 const PORT = process.env.PORT || 3000;
 
@@ -191,16 +204,11 @@ if (process.env.NODE_ENV !== 'production') {
     console.log('═══════════════════════════════════════');
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🌐 Local URL:   http://localhost:${PORT}`);
-    console.log(`📧 MongoDB:     ${process.env.MONGODB_URI ? '✅ Connected' : '❌ Not configured'}`);
-    console.log('═══════════════════════════════════════');
-    console.log('\n📌 Available Routes:');
-    console.log(`   → Home:      http://localhost:${PORT}/`);
-    console.log(`   → Sign In:   http://localhost:${PORT}/auth/signin`);
-    console.log(`   → Sign Up:   http://localhost:${PORT}/auth/signup`);
-    console.log(`   → About:     http://localhost:${PORT}/about`);
-    console.log(`   → Contact:   http://localhost:${PORT}/contact`);
-    console.log(`   → Jobs:      http://localhost:${PORT}/jobs`);
-    console.log(`   → Companies: http://localhost:${PORT}/companies`);
+    console.log(
+      `📧 MongoDB:     ${
+        process.env.MONGODB_URI ? '✅ Connected' : '❌ Not configured'
+      }`
+    );
     console.log('═══════════════════════════════════════\n');
   });
 }
@@ -218,5 +226,7 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-// Export for Vercel (serverless)
+// ============================================
+// EXPORT FOR VERCEL (Serverless)
+// ============================================
 module.exports = app;

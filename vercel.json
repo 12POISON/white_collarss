@@ -14,7 +14,9 @@
   ],
   "regions": ["bom1"],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "MONGODB_URI": "@mongodb_uri",
+    "SESSION_SECRET": "@session_secret"
   },
   "headers": [
     {
